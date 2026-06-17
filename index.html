@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Cubes - Satèl·lit</title>
+    <style>
+        :root {
+            --primary: #2e7d32;
+            --primary-dark: #1b5e20;
+            --bg: #f5f5f5;
+            --surface: #ffffff;
+            --text: #212121;
+            --border: #e0e0e0;
+            --accent: #e65100;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: var(--bg); color: var(--text); padding: 12px; font-size: 16px; }
+        
+        .container { max-width: 600px; margin: 0 auto; }
+        h1 { font-size: 20px; margin-bottom: 15px; color: var(--primary-dark); text-align: center; }
+        
+        .card { background: var(--surface); border-radius: 8px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .card-title { font-size: 14px; font-weight: bold; text-transform: uppercase; color: #666; margin-bottom: 12px; letter-spacing: 0.5px; }
+        
+        .form-group { margin-bottom: 14px; }
+        label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+        select, input { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 16px; background: #fafafa; -webkit-appearance: none; }
+        select:focus, input:focus { outline: 2px solid var(--primary); background: #fff; }
+        
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        
+        .finca-badge { background: #e8f5e9; border: 1px solid #c8e6c9; color: var(--primary-dark); padding: 10px; border-radius: 6px; margin-top: 5px; font-size: 14px; }
+        
+        .btn-calc { width: 100%; background: var(--primary); color: white; padding: 14px; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 5px; }
+        .btn-calc:active { background: var(--primary-dark); }
+        
+        /* Zona de resultats */
+        .result-box { display: none; background: #fff; border-left: 5px solid var(--primary); }
+        .alert-app { background: #fff3e0; border: 1px dashed var(--accent); padding: 12px; border-radius: 6px; margin-top: 10px; }
+        .alert-app strong { color: var(--accent); font-size: 18px; display: block; margin-top: 4px; }
+        
+        .cuba-item { background: #f9f9f9; border: 1px solid var(--border); padding: 12px; border-radius: 6px; margin-top: 8px; }
+        .cuba-plena { border-left: 4px solid var(--primary); }
+        .cuba-sobrant { border-left: 4px solid var(--accent); }
+        
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Calculadora Auxiliar de Tractaments</h1>
+
+    <!-- PAS 1: SELECCIÓ DE FINCA -->
+    <div class="card">
+        <div class="card-title">1. Dades de la Finca</div>
+        <div class="form-group">
+            <label for="selectFinca">Selecciona la Finca / Sector:</label>
+            <select id="selectFinca" onchange="actualitzarDadesFinca()">
+                <option value="">-- Tria una finca --</option>
+            </select>
+        </div>
+        <div id="fincaInfo" class="finca-badge hidden">
+            <!-- Emplenat per JS -->
+        </div>
+    </div>
+
+    <!-- PAS 2: PARÀMETRES DEL TRACTAMENT -->
+    <div class="card">
+        <div class="card-title">2. Mètode i Dosi de l'Etiqueta</div>
+        
+        <div class="form-group">
+            <label for="selectMetode">Mètode de tractament:</label>
+            <select id="selectMetode" onchange="canviMetode()">
+                <option value="atomitzador_pinyol">Fruita de Pinyol - Atomitzador</option>
+                <option value="goteig_pinyol">Fruita de Pinyol - Reg Goteig</option>
+                <option value="barra_cereal">Cereal d'Hivern - Barra Extensiva</option>
+            </select>
+        </div>
+
+        <div class="grid-2">
+            <div class="form-group">
+                <label for="inputCuba">Capacitat Cuba (L):</label>
+                <input type="number" id="inputCuba" value="2000" step="500">
+            </div>
+            <div class="form-group" id="groupGastoCaldo">
+                <label for="inputGastoHa">Gasto Caldo (L/ha):</label>
+                <input type="number" id="inputGastoHa" value="800" step="50">
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <div class="form-group">
+                <label for="selectTipusDosi">Tipus de Dosi:</label>
+                <select id="selectTipusDosi" onchange="canviTipusDosi()">
+                    <option value="per_ha">Per Hectàrea (L/ha o Kg/ha)</option>
+                    <option value="percentatge">Percentatge (%)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label id="labelValorDosi" for="inputValorDosi">Valor Dosi (L o Kg por ha):</label>
+                <input type="number" id="inputValorDosi" value="2.5" step="0.1" min="0">
+            </div>
+        </div>
+
+        <button class="btn-calc" onclick="executarCalculs()">Calcular Recepta de Cubes</button>
+    </div>
+
+    <!-- PAS 3: RESULTATS PER AL CAMP -->
+    <div id="resultats" class="card result-box">
+        <div class="card-title" style="color: var(--primary-dark);">3. Ordre de Preparació al Camp</div>
+        
+        <p>Aigua total per a la finca: <strong id="resAiguaTotal">0</strong> L.</p>
+        <p>Producte total aproximat: <strong id="resProducteTotal">0</strong> L o Kg.</p>
+
+        <!-- DADA CLAU PER COPING A L'APP PRINCIPAL -->
+        <div class="alert-app">
+            💡 <strong>Dada a introduir a l'App de Gestió:</strong>
+            <span id="resDadaApp">0 L/ha</span>
+        </div>
+
+        <div id="llistaCubes" style="margin-top: 15px;">
+            <!-- Generat dinàmicament -->
+        </div>
+    </div>
+</div>
+
+<script>
+    // La taula de dades independents que demanaves
+    const taulaFinques = [
+        { id: 1, nom: "Alfés 1-Sardera Florenti", superficie: 2.07, fruita: "Préssec Pla", varietat: "Flatbeauty" },
+        { id: 2, nom: "Alfés 2-Plana Juanito", superficie: 1.93, fruita: "Préssec Pla", varietat: "Flatbella" },
+        { id: 3, nom: "Alfés 3-Sardera Pauet", superficie: 2.64, fruita: "Préssec Pla", varietat: "Flatchief" },
+        { id: 4, nom: "Alfés 4-Moiana G Star", superficie: 6.86, fruita: "Préssec Pla", varietat: "Flatstar" },
+		{ id: 5, nom: "Alfés 4-Moiana G Reine", superficie: 3.82, fruita: "Préssec Pla", varietat: "Flatreine" },
+		{ id: 6, nom: "Alfés 4-Moiana Gran", superficie: 10.68, fruita: "Préssec Pla", varietat: "Star-Reine" },
+		{ id: 7, nom: "Alfés 5-Moiana P Reine", superficie: 2.89, fruita: "Préssec Pla", varietat: "Flatreine" },
+		{ id: 8, nom: "Alfés 5-Moiana P Boom", superficie: 1.41, fruita: "Préssec Pla", varietat: "Flatboom" },
+		{ id: 9, nom: "Alfés 5-Moiana Petita", superficie: 4.30, fruita: "Préssec Pla", varietat: "Reine-Boom" },
+		{ id: 10, nom: "Nova Alfés-Escortils Florenti", superficie: 4.18, fruita: "Albercoc", varietat: "Aprisweet" },
+		{ id: 11, nom: "Nova Alcanó Lido", superficie: 1.58, fruita: "Albercoc", varietat: "Lido" },
+		{ id: 12, nom: "Nova Alcanó Aprireve", superficie: 2.17, fruita: "Albercoc", varietat: "Aprireve" },
+		{ id: 13, nom: "Nova Alcanó-Cova del Mo", superficie: 3.75, fruita: "Albercoc", varietat: "Lido-Reve" },
+		{ id: 14, nom: "Lleida-Vinatesa Guayox", superficie: 2.70, fruita: "Préssec Pla", varietat: "Guayox 35" },
+		{ id: 15, nom: "Lleida-Vinatesa Nectadiva", superficie: 2.67, fruita: "Nectarina", varietat: "Nectadiva" },
+		{ id: 16, nom: "Lleida-Vinatesa Fruita", superficie: 5.37, fruita: "Préssec-Nectarina", varietat: "Guayox-Nectadiva" },
+		{ id: 17, nom: "Lleida-Vinatesa Secà", superficie: 2.54, fruita: "Cereal", varietat: "Secà" },
+		{ id: 18, nom: "Cogullada", superficie: 10.85, fruita: "Cereal", varietat: "Secà" },
+    ];
+
+    // Carregar finques al select en iniciar la pàgina
+    window.onload = function() {
+        const select = document.getElementById("selectFinca");
+        taulaFinques.forEach(finca => {
+            const opt = document.createElement("option");
+            opt.value = finca.id;
+            opt.innerText = `${finca.nom} (${finca.superficie} ha)`;
+            select.appendChild(opt);
+        });
+    };
+
+    function actualitzarDadesFinca() {
+        const id = document.getElementById("selectFinca").value;
+        const infoDiv = document.getElementById("fincaInfo");
+        
+        if (!id) {
+            infoDiv.classList.add("hidden");
+            return;
+        }
+
+        const finca = taulaFinques.find(f => f.id == id);
+        infoDiv.innerHTML = `<strong>Cultiu:</strong> ${finca.fruita} (${finca.varietat})<br><strong>Superfície real:</strong> ${finca.superficie} ha`;
+        infoDiv.classList.remove("hidden");
+
+        // Canvi automàtic de mètode orientatiu segons el tipus de cultiu
+        if(finca.fruita.toLowerCase() === 'cereal') {
+            document.getElementById("selectMetode").value = "barra_cereal";
+            document.getElementById("inputGastoHa").value = "200";
+        } else {
+            document.getElementById("selectMetode").value = "atomitzador_pinyol";
+            document.getElementById("inputGastoHa").value = "800";
+        }
+        canviMetode();
+    }
+
+    function canviMetode() {
+        const metode = document.getElementById("selectMetode").value;
+        const groupGastoCaldo = document.getElementById("groupGastoCaldo");
+        const inputGastoHa = document.getElementById("inputGastoHa");
+
+        if (metode === 'goteig_pinyol') {
+            groupGastoCaldo.style.display = "none";
+            document.getElementById("selectTipusDosi").value = "per_ha";
+            document.getElementById("selectTipusDosi").disabled = true;
+        } else {
+            groupGastoCaldo.style.display = "block";
+            document.getElementById("selectTipusDosi").disabled = false;
+            if(metode === 'barra_cereal' && inputGastoHa.value == "800") {
+                inputGastoHa.value = "200";
+            } else if (metode === 'atomitzador_pinyol' && inputGastoHa.value == "200") {
+                inputGastoHa.value = "800";
+            }
+        }
+        canviTipusDosi();
+    }
+
+    function canviTipusDosi() {
+        const tipus = document.getElementById("selectTipusDosi").value;
+        const label = document.getElementById("labelValorDosi");
+        const input = document.getElementById("inputValorDosi");
+
+        if (tipus === 'percentatge') {
+            label.innerText = "Percentatge (% a la cuba):";
+            input.value = "0.15";
+            input.step = "0.01";
+        } else {
+            label.innerText = "Valor Dosi (L o Kg per ha):";
+            input.value = "2.5";
+            input.step = "0.1";
+        }
+    }
+
+    function executarCalculs() {
+        const fincaId = document.getElementById("selectFinca").value;
+        if (!fincaId) {
+            alert("Si us plau, selecciona primer una finca de la llista.");
+            return;
+        }
+
+        const finca = taulaFinques.find(f => f.id == fincaId);
+        const capacitatCuba = parseFloat(document.getElementById("inputCuba").value);
+        const metode = document.getElementById("selectMetode").value;
+        const gastoCaldoHa = parseFloat(document.getElementById("inputGastoHa").value);
+        const tipusDosi = document.getElementById("selectTipusDosi").value;
+        const valorDosi = parseFloat(document.getElementById("inputValorDosi").value);
+
+        // Crida de la funció pura de càlcul
+        const resultats = calcularLlogicaTractament({
+            superficie: finca.superficie,
+            capacitatCuba: capacitatCuba,
+            metode: metode,
+            gastoCaldoHa: gastoCaldoHa,
+            producte: { tipus_dosi: tipusDosi, valor: valorDosi }
+        });
+
+        // Pintar els resultats a la pantalla
+        document.getElementById("resAiguaTotal").innerText = resultats.aigua_total_finca;
+        document.getElementById("resProducteTotal").innerText = resultats.producte_total_finca;
+        
+        // Mostrar clarament el que s'ha de posar a l'app de producció
+        const unitat = tipusDosi === 'percentatge' ? 'L o Kg / Ha (Conversió feta)' : 'L o Kg / Ha';
+        document.getElementById("resDadaApp").innerText = `${resultats.dosi_per_a_app_produccio} ${unitat}`;
+
+        // Generar gràficament el repartiment de les bótes
+        const llistaCubesDiv = document.getElementById("llistaCubes");
+        llistaCubesDiv.innerHTML = "<h4>Com repartir els productes a les botes:</h4>";
+        
+        resultats.desglos_cubades.forEach((cuba, index) => {
+            const classCuba = cuba.tipus === 'Plena' ? 'cuba-plena' : 'cuba-sobrant';
+            const item = document.createElement("div");
+            item.className = `cuba-item ${classCuba}`;
+            item.innerHTML = `<strong>BOZA Nº ${index + 1} (${cuba.tipus}):</strong><br>
+                              💧 Aigua neta: <strong>${cuba.litres_aigua} Litres</strong><br>
+                              🧪 Producte pur a afegir: <strong style="color:var(--accent);">${cuba.producte_a_afegir} L o Kg</strong>`;
+            llistaCubesDiv.appendChild(item);
+        });
+
+        document.getElementById("resultats").style.display = "block";
+        // Scroll automàtic cap als resultats perquè es vegi bé en pantalles petites de mòbil
+        document.getElementById("resultats").scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // El motor intern de càlcul adaptat
+    function calcularLlogicaTractament({ superficie, capacitatCuba, metode, producte, gastoCaldoHa }) {
+        let caldoPerHa = gastoCaldoHa;
+        if (metode === 'goteig_pinyol') {
+            caldoPerHa = capacitatCuba / superficie; 
+        }
+
+        const aiguaTotalNecessaria = superficie * caldoPerHa;
+        let producteTotalFinca = 0;
+        let dosiFinalRegistar = 0;
+
+        if (producte.tipus_dosi === 'per_ha') {
+            producteTotalFinca = superficie * producte.valor;
+            dosiFinalRegistar = producte.valor;
+        } else if (producte.tipus_dosi === 'percentatge') {
+            producteTotalFinca = (aiguaTotalNecessaria * (producte.valor / 100));
+            dosiFinalRegistar = producteTotalFinca / superficie; 
+        }
+
+        const nCubadesSenceres = Math.floor(aiguaTotalNecessaria / capacitatCuba);
+        const aiguaCubaSobrant = aiguaTotalNecessaria % capacitatCuba;
+        const cubades = [];
+        
+        for (let i = 0; i < nCubadesSenceres; i++) {
+            cubades.push({
+                tipus: 'Plena',
+                litres_aigua: capacitatCuba,
+                producte_a_afegir: (capacitatCuba / aiguaTotalNecessaria) * producteTotalFinca
+            });
+        }
+        
+        if (aiguaCubaSobrant > 0.1) {
+            cubades.push({
+                tipus: 'Residual / Sobrant',
+                litres_aigua: Math.round(aiguaCubaSobrant),
+                producte_a_afegir: (aiguaCubaSobrant / aiguaTotalNecessaria) * producteTotalFinca
+            });
+        }
+
+        return {
+            aigua_total_finca: Math.round(aiguaTotalNecessaria),
+            producte_total_finca: Number(producteTotalFinca.toFixed(2)),
+            dosi_per_a_app_produccio: Number(dosiFinalRegistar.toFixed(3)),
+            desglos_cubades: cubades.map(c => ({
+                ...c,
+                litres_aigua: Math.round(c.litres_aigua),
+                producte_a_afegir: Number(c.producte_a_afegir.toFixed(2))
+            }))
+        };
+    }
+</script>
+</body>
+</html>
